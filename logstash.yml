@@ -1,0 +1,14 @@
+cloud.auth: ${CLOUD_AUTH}
+cloud.id: ${CLOUD_ID}
+config.reload.automatic: true
+config.reload.interval: 30s
+http.host: 0.0.0.0
+log.level: info
+monitoring.cluster_uuid: ${CLUSTER_UUID}
+monitoring.elasticsearch.cloud_auth: ${CLOUD_AUTH}
+monitoring.elasticsearch.cloud_id: ${CLOUD_ID}
+monitoring.enabled: true
+path.config: /usr/share/logstash/pipeline
+pipeline.batch.delay: 50
+pipeline.batch.size: 125
+pipeline.workers: 2

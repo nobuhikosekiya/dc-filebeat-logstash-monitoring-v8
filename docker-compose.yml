@@ -1,0 +1,107 @@
+services:
+  filebeat1:
+    image: docker.elastic.co/beats/filebeat:${STACK_VERSION}
+    restart: always
+    user: root
+    environment:
+      - CLOUD_ID=${CLOUD_ID}
+      - CLOUD_AUTH=${CLOUD_AUTH}
+      - CLUSTER_UUID=${CLUSTER_UUID}
+    volumes:
+      - ./filebeat1.yml:/usr/share/filebeat/filebeat.yml:ro
+      - logs1:/var/log/mylogs
+
+  filebeat2:
+    image: docker.elastic.co/beats/filebeat:${STACK_VERSION}
+    restart: always
+    user: root
+    environment:
+      - CLOUD_ID=${CLOUD_ID}
+      - CLOUD_AUTH=${CLOUD_AUTH}
+      - CLUSTER_UUID=${CLUSTER_UUID}
+    volumes:
+      - ./filebeat2.yml:/usr/share/filebeat/filebeat.yml:ro
+      - logs2:/var/log/mylogs
+
+  logstash1:
+    image: docker.elastic.co/logstash/logstash:${STACK_VERSION}
+    container_name: logstash1
+    volumes:
+      - ./logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./log4j2.properties:/usr/share/logstash/config/log4j2.properties
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./logstash/secrets:/usr/share/logstash/secrets:ro
+    environment:
+      - CLOUD_ID=${CLOUD_ID}
+      - CLOUD_AUTH=${CLOUD_AUTH}
+      - CLUSTER_UUID=${CLUSTER_UUID}
+      - LS_JAVA_OPTS=-Xmx256m -Xms256m
+    restart: unless-stopped
+
+  logstash2:
+    image: docker.elastic.co/logstash/logstash:${STACK_VERSION}
+    container_name: logstash2
+    volumes:
+      - ./logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./log4j2.properties:/usr/share/logstash/config/log4j2.properties
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./logstash/secrets:/usr/share/logstash/secrets:ro
+    environment:
+      - CLOUD_ID=${CLOUD_ID}
+      - CLOUD_AUTH=${CLOUD_AUTH}
+      - CLUSTER_UUID=${CLUSTER_UUID}
+      - LS_JAVA_OPTS=-Xmx256m -Xms256m
+    restart: unless-stopped
+
+  post-log1:
+    image: busybox
+    command: >
+      sh -c '
+        while true
+        do
+          echo this is a message on `date` >> /var/log/mylogs/abc.log
+          sleep 10
+        done
+      '
+    user: root
+    volumes:
+      - logs1:/var/log/mylogs
+
+  post-log2:
+    image: busybox
+    command: >
+      sh -c '
+        while true
+        do
+          echo this is a message on `date` >> /var/log/mylogs/abc.log
+          sleep 5
+        done
+      '
+    user: root
+    volumes:
+      - logs2:/var/log/mylogs
+
+  logstash-proxy:
+    image: nginx:alpine
+    container_name: logstash-proxy
+    ports:
+      - "5044:5044"  # Filebeat用ポート
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - logstash1
+      - logstash2
+    restart: unless-stopped
+
+volumes:
+  logs1:
+    name: ${PROJECT}-log1-volume
+    driver: local
+  logs2:
+    name: ${PROJECT}-log2-volume
+    driver: local
+
+networks:
+  default:
+    name: elastic
+    external: true
